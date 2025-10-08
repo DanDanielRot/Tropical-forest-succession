@@ -139,7 +139,7 @@ anova(lmm_touch)
 
 
 
-## lmer leaf area index
+###---lmer leaf area index
 
 lmm_lai <- lmer(Leaf_area_index ~ Age * Forest_type + (1|Site), data = veg)
 

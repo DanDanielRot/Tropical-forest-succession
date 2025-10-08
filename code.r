@@ -29,6 +29,8 @@ data_full <- forest_vegetation %>%
 
 glimpse(data_full)
 
+
+##shannon diversity plotted over the years, grouped by forest type, 
 ggplot(data_full, aes(x = Age, y = Shannon_diversity, group = Forest_type, color = Forest_type)) +
   stat_summary(fun = mean, geom = "line", linewidth = 1.2) +
   stat_summary(fun.data = mean_se, geom = "errorbar", width = 0.1) +
@@ -36,6 +38,8 @@ ggplot(data_full, aes(x = Age, y = Shannon_diversity, group = Forest_type, color
   labs(title = "Mean Shannon Diversity Trends",
        x = "Year", y = "Shannon Diversity Index")
 
+
+##species richness plotted over the years, grouped by forest type, 
 ggplot(data_full, aes(x = Age, y = Species_richness, group = Forest_type, color = Forest_type)) +
   stat_summary(fun = mean, geom = "line", linewidth = 1.2) +
   stat_summary(fun.data = mean_se, geom = "errorbar", width = 0.1) +
@@ -43,6 +47,8 @@ ggplot(data_full, aes(x = Age, y = Species_richness, group = Forest_type, color 
   labs(title = "Mean species richness",
        x = "Year", y = "species richness") 
 
+
+##leaf area index plotted over the years, grouped by forest type, (boxplot)
 ggplot(data_full, aes(x = Age, y = Leaf_area_index, color = Forest_type)) +
   geom_boxplot() +
   geom_jitter(width = 0.1, alpha = 0.7) +
@@ -50,6 +56,8 @@ ggplot(data_full, aes(x = Age, y = Leaf_area_index, color = Forest_type)) +
        y = "Leaf Area Index", x = "Year")
 
 
+
+##total touch plotted over the years, grouped by forest type, (boxplot)
 ggplot(data_full, aes(x = Age, y = Total_touch, color = Forest_type)) +
   geom_boxplot() +
   labs(title = "Vegetation Density (Total Touch) across Succession",
@@ -66,6 +74,9 @@ growth_forms <- growth_forms %>%
   group_by(Forest_type, Age, Site) %>%
   mutate(Proportion = Touches / sum(Touches))
 
+
+
+##changes in growth form composition over time 
 ggplot(growth_forms, aes(x = Age, y = Proportion, fill = Growth_form)) +
   geom_bar(stat = "identity", position = "fill") +
   facet_wrap(~ Forest_type) +
@@ -74,12 +85,16 @@ ggplot(growth_forms, aes(x = Age, y = Proportion, fill = Growth_form)) +
   scale_fill_brewer(palette = "Set2") 
 
 
+##
 env_numeric <- forest_environmental %>%
   select(Soil_pH, Organic_matter, Nitrogen, Phosphorus, Potassium,
          starts_with("Surrounding_forest_cover"))
 
+##correlation plot
 corrplot(cor(env_numeric, use = "complete.obs"), method = "color", tl.col = "black")
 
+
+##Effect of Soil Organic Matter on Species Richness 
 ggplot(data_full, aes(x = Organic_matter, y = Species_richness, color = Forest_type)) +
   geom_point(size = 3) +
   geom_smooth(method = "lm", se = FALSE) +

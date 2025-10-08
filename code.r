@@ -90,18 +90,6 @@ ggplot(data_full, aes(x = Organic_matter, y = Species_richness, color = Forest_t
 ###############################
 
 
-lmm_rich <- lmer(Species_richness ~ Age * Forest_type + (1|Site), data = veg)
-anova(lmm_rich)
-
-lmm_shannon <- lmer(Shannon_diversity ~ Age * Forest_type + (1|Site), data = veg)
-
-lmm_touch <- lmer(Total_touch ~ Age * Forest_type + (1|Site), data = veg)
-lmm_lai <- lmer(Leaf_area_index ~ Age * Forest_type + (1|Site), data = veg)
-
-
-
-
-
 
 
 

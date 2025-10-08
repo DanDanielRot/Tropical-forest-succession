@@ -99,16 +99,6 @@ lmm_touch <- lmer(Total_touch ~ Age * Forest_type + (1|Site), data = veg)
 lmm_lai <- lmer(Leaf_area_index ~ Age * Forest_type + (1|Site), data = veg)
 
 
-anova(lmm_touch); anova(lmm_lai); anova(lmm_woody)
-
-emmeans(lmm_rich, pairwise ~ Age | Forest_type, adjust="tukey")
-
-
-
-
-
-
-
 
 
 

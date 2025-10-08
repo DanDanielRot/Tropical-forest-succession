@@ -1,0 +1,103 @@
+Plant_data <- read_xlsx("~/Documents/R/EM group project tropical forest/EM_Tropical_forest_succession.xlsx")
+
+Plant_data$SiteAge <- paste(Plant_data$Site, "-", Plant_data$Age)
+
+Species_data <- Plant_data %>% column_to_rownames("SiteAge")
+Species_data <- Species_data[-(1:7)]
+View(Species_data)
+
+Plant_data_other <- Plant_data %>% column_to_rownames("SiteAge")
+Plant_data_other <- Plant_data_other[-(8:15)]
+View(Plant_data_other)
+
+Plant_data <- Plant_data %>% column_to_rownames("Site")
+str(Plant_data)
+barplot(rowSums(Species_data), ylab = "Total leaf touches all species", las = 2)
+sum(Plant_data == 0) / (nrow(Plant_data) * ncol(Plant_data))
+decorana(Species_data)
+
+
+# Scaled PCA
+pcascale <- pca(Species_data, scale = TRUE)
+pcascale
+screeplot(pcascale, bstick = TRUE)
+
+#look at eigenvalues
+summary(eigenvals(pcascale))
+# Cum prop PC2 is 0.56 dus 56% is explained by first two axis
+
+biplot(pcascale, type = "text")
+anova(pcascale)
+
+# Then run the following:
+  library(tidyverse)
+library(vegan)   # if you're using 'scores()' from vegan
+
+## central points
+
+site_scores <- site_scores %>%
+  mutate(Group = paste(Forest_type, Year, sep = "_"))
+
+# --- 5. Compute convex hulls for each group ---
+hull_data <- site_scores %>%
+  group_by(Group) %>%
+  slice(chull(PC1, PC2))
+
+# --- 6. Compute centroids (mean coordinates per Forest_type × Year) ---
+centroids <- site_scores %>%
+  group_by(Forest_type, Year) %>%
+  summarise(PC1 = mean(PC1), PC2 = mean(PC2))
+
+# --- 7. Define color palette for the 6 hulls ---
+hull_colors <- c(
+  "Dry_1" = "#1b9e77",  # green
+  "Wet_1" = "#7570b3",  # blue
+  "Dry_2" = "#d95f02",  # orange
+  "Wet_2" = "#e7298a",  # pink
+  "Dry_3" = "#66a61e",  # light green
+  "Wet_3" = "#1f78b4"   # light blue
+)
+
+# --- 8. Plot everything ---
+ggplot() +
+  # (a) Hull polygons
+  geom_polygon(data = hull_data,
+               aes(x = PC1, y = PC2, group = Group, fill = Group),
+               alpha = 0.25, color = "black", linewidth = 0.5) +
+  
+  # (b) Site points (small)
+  geom_point(data = site_scores,
+             aes(x = PC1, y = PC2, color = Forest_type),
+             size = 2, alpha = 0.6) +
+  
+  # (c) Centroid trajectories
+  geom_path(data = centroids,
+            aes(x = PC1, y = PC2, group = Forest_type, color = Forest_type),
+            arrow = arrow(length = unit(0.25, "cm")),
+            linewidth = 1.2) +
+  geom_point(data = centroids,
+             aes(x = PC1, y = PC2, fill = Forest_type),
+             shape = 21, color = "black", size = 5) +
+  geom_text(data = centroids,
+            aes(x = PC1, y = PC2, label = Year),
+            color = "black", vjust = -1, fontface = "bold", size = 4) +
+  
+  # (d) Species (functional group) arrows (red)
+  geom_segment(data = species_scores,
+               aes(x = 0, y = 0, xend = PC1, yend = PC2),
+               arrow = arrow(length = unit(0.2, "cm")),
+               color = "red", linewidth = 0.7) +
+  geom_text(data = species_scores,
+            aes(x = PC1 * 1.1, y = PC2 * 1.1, label = FG),
+            color = "red", size = 4, fontface = "italic") +
+  
+  # (e) Aesthetics
+  scale_color_manual(values = c("Dry" = "forestgreen", "Wet" = "blue")) +
+  scale_fill_manual(values = hull_colors) +
+  theme_minimal() +
+  labs(x = "PC1", y = "PC2",
+       title = "PCA biplot: site trajectories, species vectors and centroid arrows",
+       subtitle = "Arrows connect mean community positions (centroids) for Years 1–3 per forest type",
+       color = "Forest type", fill = "Forest type × Year") +
+  theme(legend.position = "right",
+        text = element_text(size = 13))

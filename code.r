@@ -102,7 +102,60 @@ ggplot(data_full, aes(x = Organic_matter, y = Species_richness, color = Forest_t
        x = "Soil Organic Matter (%)", y = "Species Richness")
 
 
-###############################
+############################### linear mixed models
+
+###shannon diversity 
+
+lmm_shannon <- lmer(Shannon_diversity ~ Age * Forest_type + (1|Site), data = veg)
+
+# Compute EMMs
+em_shannon <- emmeans(lmm_shannon, ~ Age | Forest_type)
+
+# Pairwise comparisons with Tukey adjustment
+pair_shannon <- contrast(em_shannon, method = "pairwise", adjust = "tukey")
+
+# View results
+summary(pair_shannon)
+
+anova(lmm_shannon)
+
+
+
+###total touch lmm
+
+lmm_touch <- lmer(Total_touch ~ Age * Forest_type + (1|Site), data = veg)
+
+# Compute EMMs
+em_touch <- emmeans(lmm_touch, ~ Age | Forest_type)
+
+# Pairwise comparisons with Tukey adjustment
+pair_touch <- contrast(em_touch, method = "pairwise", adjust = "tukey")
+
+# View results
+summary(pair_touch)
+
+anova(lmm_touch)
+
+
+
+
+## lmer leaf area index
+
+lmm_lai <- lmer(Leaf_area_index ~ Age * Forest_type + (1|Site), data = veg)
+
+# Compute EMMs
+em_lai <- emmeans(lmm_lai, ~ Age | Forest_type)
+
+# Pairwise comparisons with Tukey adjustment
+pair_lai <- contrast(em_lai, method = "pairwise", adjust = "tukey")
+
+# View results
+summary(pair_lai)
+
+anova(lmm_lai)
+
+
+
 
 
 

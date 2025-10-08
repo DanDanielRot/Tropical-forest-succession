@@ -90,6 +90,20 @@ ggplot(data_full, aes(x = Organic_matter, y = Species_richness, color = Forest_t
 ###############################
 
 
+# Diversity metrics
+lmm_rich <- lmer(Species_richness ~ Age * Forest_type + (1|Site), data = veg)
+
+
+
+anova(lmm_rich)
+
+
+
+
+
+
+
+
 
 
 

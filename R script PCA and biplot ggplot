@@ -1,3 +1,10 @@
+library(car)
+library(corrplot)
+library(tidyverse)
+library(readxl)
+library(vegan)
+library(ggpubr)
+
 Plant_data <- read_xlsx("~/Documents/R/EM group project tropical forest/EM_Tropical_forest_succession.xlsx")
 
 Plant_data$SiteAge <- paste(Plant_data$Site, "-", Plant_data$Age)
@@ -16,6 +23,9 @@ barplot(rowSums(Species_data), ylab = "Total leaf touches all species", las = 2)
 sum(Plant_data == 0) / (nrow(Plant_data) * ncol(Plant_data))
 decorana(Species_data)
 
+forest_environmental <- read_xlsx("~/Documents/R/EM group project tropical forest/EM_Tropical_forest_succession.xlsx", sheet = "Site_environmental_data")
+
+forest_vegetation <- read_xlsx("~/Documents/R/EM group project tropical forest/EM_Tropical_forest_succession.xlsx", sheet="Site_vegetation_data")
 
 # Scaled PCA
 pcascale <- pca(Species_data, scale = TRUE)
@@ -101,3 +111,89 @@ ggplot() +
        color = "Forest type", fill = "Forest type × Year") +
   theme(legend.position = "right",
         text = element_text(size = 13))
+
+### Environmental data fitted
+data_full <- forest_vegetation %>%
+  left_join(forest_environmental, by = c("Forest_type", "Site"))
+#data_full = data_full[-(4:14)]
+#data_full = data_full[-(2)]
+#data_full = data_full[-(4:5)]
+
+
+envfitpca <- envfit(pcascale, data_full)
+biplot(pcascale, type = "text")
+plot(envfitpca, p.max = 0.05, add = TRUE)
+envfitpca
+
+################### met envfit plot
+
+# --- Extract environmental vectors with p-values ---
+env_scores <- as.data.frame(scores(envfitpca, "vectors"))
+env_scores$Variable <- rownames(env_scores)
+
+# Voeg p-waarden toe van envfit
+env_scores$pval <- envfitpca$vectors$pvals
+
+# Filter alleen significante variabelen
+env_scores_sig <- env_scores %>%
+  filter(pval < 0.05)
+
+# Scaling factor (optioneel)
+mult <- 2
+env_scores_sig <- env_scores_sig %>%
+  mutate(PC1 = PC1 * mult,
+         PC2 = PC2 * mult)
+
+# --- Plot only significant environmental arrows ---
+ggplot() +
+  # (a) Hull polygons
+  geom_polygon(data = hull_data,
+               aes(x = PC1, y = PC2, group = Group, fill = Group),
+               alpha = 0.25, color = "black", linewidth = 0.5) +
+  
+  # (b) Site points
+  geom_point(data = site_scores,
+             aes(x = PC1, y = PC2, color = Forest_type),
+             size = 2, alpha = 0.6) +
+  
+  # (c) Centroid trajectories
+  geom_path(data = centroids,
+            aes(x = PC1, y = PC2, group = Forest_type, color = Forest_type),
+            arrow = arrow(length = unit(0.25, "cm")),
+            linewidth = 1.2) +
+  geom_point(data = centroids,
+             aes(x = PC1, y = PC2, fill = Forest_type),
+             shape = 21, color = "black", size = 5) +
+  geom_text(data = centroids,
+            aes(x = PC1, y = PC2, label = Year),
+            color = "black", vjust = -1, fontface = "bold", size = 4) +
+  
+  # (d) Species arrows (red)
+  geom_segment(data = species_scores,
+               aes(x = 0, y = 0, xend = PC1, yend = PC2),
+               arrow = arrow(length = unit(0.2, "cm")),
+               color = "red", linewidth = 0.7) +
+  geom_text(data = species_scores,
+            aes(x = PC1 * 1.1, y = PC2 * 1.1, label = FG),
+            color = "red", size = 4, fontface = "italic") +
+  
+  # (e) Significant environmental arrows (darkorange)
+  geom_segment(data = env_scores_sig,
+               aes(x = 0, y = 0, xend = PC1, yend = PC2),
+               arrow = arrow(length = unit(0.25, "cm")),
+               color = "darkgoldenrod1", linewidth = 1) +
+  geom_text(data = env_scores_sig,
+            aes(x = PC1 * 1.1, y = PC2 * 1.1, label = Variable),
+            color = "darkgoldenrod1", size = 4, fontface = "bold") +
+  
+  # (f) Aesthetics
+  scale_color_manual(values = c("Dry" = "forestgreen", "Wet" = "blue")) +
+  scale_fill_manual(values = hull_colors) +
+  theme_minimal() +
+  labs(x = "PC1", y = "PC2",
+       title = "PCA biplot: species, significant environment, site trajectories & centroids",
+       subtitle = "Red = species (FG), Orange = significant environmental variables (p < 0.05)",
+       color = "Forest type", fill = "Forest type × Year") +
+  theme(legend.position = "right",
+        text = element_text(size = 13))
+

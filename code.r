@@ -12,6 +12,7 @@ library(cowplot)
 library(goeveg)
 library(corrplot)
 library(ggpubr)
+library(adespatial)
 
 ###Functions ----
 ###Function tpaired.randtest ----
@@ -76,11 +77,10 @@ tpaired.krandtest <- function(mat1, mat2, nperm=999, list.all=FALSE)
   else out <- list(t.tests=res[Keep,],Tested=sp.names[Keep],No_test=sp.names[Reject])
   out
 }
-
 ###data preperation ----
 #Read files
-environmental <- read_xlsx("~/Downloads/EM_Tropical_forest_succession(1).xlsx", sheet="Site_environmental_data")
-vegetation <- read_xlsx("~/Downloads/EM_Tropical_forest_succession(1).xlsx", sheet="Site_vegetation_data")
+environmental <- read_xlsx("EM_Tropical_forest_succession.xlsx", sheet="Site_environmental_data")
+vegetation <- read_xlsx("EM_Tropical_forest_succession.xlsx", sheet="Site_vegetation_data")
 
 #make columns factors
 vegetation <- vegetation %>%
@@ -107,8 +107,9 @@ growth_forms <- growth_forms %>%
   mutate(Proportion = Touches / sum(Touches))
 
 ##Matrix with growth form types
-vegetation$Site <- paste(vegetation$Site, vegetation$Age)
-matrix <- vegetation %>% column_to_rownames("Site")
+veg <-vegetation
+veg$Site <- paste(vegetation$Site, vegetation$Age)
+matrix <- veg %>% column_to_rownames("Site")
 matrix <- select(matrix, "Herb", "Grass", "Fern", "Vine", "Liana", "Shrub", "Tree")
 #assign rows to their respective years
 year1 <- c(1,4,7,10,13,16,19,22,25,28,31,34,37,40,43,46,49,52,55,58,61,64,67,70,73,76,79,82,85,88)
@@ -148,23 +149,16 @@ ggplot(data_full, aes(x = Age, y = Species_richness, group = Forest_type, color 
        x = "Year", y = "vegetation richness") +
   theme_pubr()
 
-##leaf area index plotted over the years, grouped by forest type, (boxplot)
-ggplot(data_full, aes(x = Age, y = Leaf_area_index, color = Forest_type)) +
-  geom_boxplot() +
-  geom_jitter(width = 0.1, alpha = 0.7) +
-  labs(title = "Leaf Area Index by Age and Forest Type",
-       y = "Leaf Area Index", x = "Year") +
-  theme_pubr()
-
-##total touch plotted over the years, grouped by forest type, (boxplot)
-ggplot(data_full, aes(x = Age, y = Total_touch, color = Forest_type)) +
-  geom_boxplot() +
-  labs(title = "Vegetation Density (Total Touch) across Succession",
-       y = "Total Touch Count") +
+##Leaf area index (coverage) plotted over the years, grouped by forest type, 
+ggplot(data_full, aes(x = Age, y = Leaf_area_index, group = Forest_type, color = Forest_type)) +
+  stat_summary(fun = mean, geom = "line", linewidth = 1.2) +
+  stat_summary(fun.data = mean_se, geom = "errorbar", width = 0.1) +
+  stat_summary(fun = mean, geom = "point", size = 4) +
+  labs(title = "Mean coverage trend",
+       x = "Year", y = "Leaf area index") +
   theme_pubr()
 
 ##changes in growth form composition over time 
-
 growth_forms <- data_full %>%
   pivot_longer(cols = c(Herb, Grass, Fern, Vine, Liana, Shrub, Tree),
                names_to = "Growth_form", values_to = "Touches") %>%
@@ -183,7 +177,7 @@ ggplot(growth_forms, aes(x = Age, y = Total_Touches, fill = Growth_form)) +
   facet_wrap(~ Forest_type, scales = "free_y") +  # allow separate scaling per forest
   labs(
     title = "Total Growth Form Touches Over Time",
-    x = "Successional Age",
+    x = "Age",
     y = "Total Touches (absolute)"
   ) +
   scale_fill_brewer(palette = "Set2") +
@@ -280,13 +274,30 @@ ggplot(environmental, aes(x = Forest_type, y = Potassium, fill = Forest_type)) +
   theme_minimal() +
   theme(legend.position = "none")
 
+##leaf area index plotted over the years, grouped by forest type, (boxplot)
+ggplot(data_full, aes(x = Age, y = Leaf_area_index, color = Forest_type)) +
+  geom_boxplot() +
+  geom_jitter(width = 0.1, alpha = 0.7) +
+  labs(title = "Leaf Area Index by Age and Forest Type",
+       y = "Leaf Area Index", x = "Year") +
+  theme_pubr()
+
+##total touch plotted over the years, grouped by forest type, (boxplot)
+ggplot(data_full, aes(x = Age, y = Total_touch, color = Forest_type)) +
+  geom_boxplot() +
+  labs(title = "Vegetation Density (Total Touch) across Succession",
+       y = "Total Touch Count") +
+  theme_pubr()
+
 ###Other plots ----
 
 ##correlation plot
 corrplot(cor(env_numeric, use = "complete.obs"), method = "color", tl.col = "black")
 
-###RQ1---
+###RQ1----
 #How does vegetation structure, diversity, and composition change in the early succession of dry and wet forests?
+
+vegetation$Site <- as.factor(vegetation$Site)
 
 ##differences in Shannon diversity over the years between the forest types
 lmm_shannon <- lmer(Shannon_diversity ~ Age * Forest_type + (1|Site), data = vegetation)
@@ -453,6 +464,15 @@ ggplot() +
 
 ###RQ2----
 #What are the environmental and landscape drivers of successional trajectories?
+
+##Mixed models with environmental data
+#Shannon diversity
+lmerDi <- lmer(Shannon_diversity~ Age + Forest_type + scale(Surrounding_forest_cover_200) + scale(Organic_matter) +scale(Nitrogen) + scale(Phosphorus) + scale(Potassium) + (1|Site), data= data_full)
+summary(lmerDi)
+
+#Leaf area index (coverage)
+lmerCo <- lmer(Leaf_area_index~ Age + Forest_type + scale(Surrounding_forest_cover_200) + scale(Organic_matter) +scale(Nitrogen) + scale(Phosphorus) + scale(Potassium) + (1|Site), data= data_full)
+summary(lmerCo)
 
 ##Create dataset with TBI data and environmental data
 distance <- merge(Sites, environmental, by = c("Site"))

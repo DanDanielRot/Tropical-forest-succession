@@ -164,13 +164,31 @@ ggplot(data_full, aes(x = Age, y = Total_touch, color = Forest_type)) +
   theme_pubr()
 
 ##changes in growth form composition over time 
-ggplot(growth_forms, aes(x = Age, y = Proportion, fill = Growth_form)) +
-  geom_bar(stat = "identity", position = "fill") +
-  facet_wrap(~ Forest_type) +
-  labs(title = "Changes in Growth Form Composition over Time",
-       x = "Successional Age", y = "Proportion of Total Touches") +
+
+growth_forms <- data_full %>%
+  pivot_longer(cols = c(Herb, Grass, Fern, Vine, Liana, Shrub, Tree),
+               names_to = "Growth_form", values_to = "Touches") %>%
+  group_by(Forest_type, Age, Growth_form) %>%
+  summarise(Total_Touches = sum(Touches, na.rm = TRUE), .groups = "drop") %>%
+  group_by(Forest_type, Age) %>%
+  mutate(Proportion = Total_Touches / sum(Total_Touches))
+
+ggplot(growth_forms, aes(x = Age, y = Total_Touches, fill = Growth_form)) +
+  geom_bar(stat = "identity", position = "stack") +
+  geom_text(
+    aes(label = Total_Touches),
+    position = position_stack(vjust = 0.5),
+    size = 3, color = "black"
+  ) +
+  facet_wrap(~ Forest_type, scales = "free_y") +  # allow separate scaling per forest
+  labs(
+    title = "Total Growth Form Touches Over Time",
+    x = "Successional Age",
+    y = "Total Touches (absolute)"
+  ) +
   scale_fill_brewer(palette = "Set2") +
-  theme_pubr()
+  theme_minimal()
+
 
 #Herbs
 ggplot(data = vegetation, mapping = aes(x = Age, y = Herb, colour = Forest_type)) + 

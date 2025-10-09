@@ -10,6 +10,7 @@ library(vegan)
 library(cowplot)
 library(goeveg)
 library(corrplot)
+library(ggpubr)
 
 
 environmental <- read_xlsx("~/Downloads/EM_Tropical_forest_succession(1).xlsx", sheet="Site_environmental_data")
@@ -17,15 +18,15 @@ environmental <- read_xlsx("~/Downloads/EM_Tropical_forest_succession(1).xlsx", 
 vegetation <- read_xlsx("~/Downloads/EM_Tropical_forest_succession(1).xlsx", sheet="Site_vegetation_data")
 
 
-forest_vegetation <- forest_vegetation %>%
+vegetation <- vegetation %>%
   mutate(
     Forest_type = factor(Forest_type, levels = c("Dry", "Wet")),
     Age = as.factor(Age),
     Site = as.factor(Site)
   )
 
-data_full <- forest_vegetation %>%
-  left_join(forest_environmental, by = c("Forest_type", "Site"))
+data_full <- vegetation %>%
+  left_join(environmental, by = c("Forest_type", "Site"))
 
 glimpse(data_full)
 
@@ -36,7 +37,8 @@ ggplot(data_full, aes(x = Age, y = Shannon_diversity, group = Forest_type, color
   stat_summary(fun.data = mean_se, geom = "errorbar", width = 0.1) +
   stat_summary(fun = mean, geom = "point", size = 4) +
   labs(title = "Mean Shannon Diversity Trends",
-       x = "Year", y = "Shannon Diversity Index")
+       x = "Year", y = "Shannon Diversity Index") +
+  theme_pubr()
 
 
 ##species richness plotted over the years, grouped by forest type, 
@@ -45,7 +47,8 @@ ggplot(data_full, aes(x = Age, y = Species_richness, group = Forest_type, color 
   stat_summary(fun.data = mean_se, geom = "errorbar", width = 0.1) +
   stat_summary(fun = mean, geom = "point", size = 4) +
   labs(title = "Mean species richness",
-       x = "Year", y = "species richness") 
+       x = "Year", y = "species richness") +
+  theme_pubr()
 
 
 ##leaf area index plotted over the years, grouped by forest type, (boxplot)
@@ -53,7 +56,8 @@ ggplot(data_full, aes(x = Age, y = Leaf_area_index, color = Forest_type)) +
   geom_boxplot() +
   geom_jitter(width = 0.1, alpha = 0.7) +
   labs(title = "Leaf Area Index by Age and Forest Type",
-       y = "Leaf Area Index", x = "Year")
+       y = "Leaf Area Index", x = "Year") +
+  theme_pubr()
 
 
 
@@ -61,10 +65,11 @@ ggplot(data_full, aes(x = Age, y = Leaf_area_index, color = Forest_type)) +
 ggplot(data_full, aes(x = Age, y = Total_touch, color = Forest_type)) +
   geom_boxplot() +
   labs(title = "Vegetation Density (Total Touch) across Succession",
-       y = "Total Touch Count") 
+       y = "Total Touch Count") +
+  theme_pubr()
 
 
-
+##Transpose dataset
 growth_forms <- data_full %>%
   pivot_longer(cols = c(Herb, Grass, Fern, Vine, Liana, Shrub, Tree),
                names_to = "Growth_form", values_to = "Touches")

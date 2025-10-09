@@ -12,20 +12,20 @@ library(goeveg)
 library(corrplot)
 
 
-forest_environmental <- read_xlsx("~/Downloads/EM_Tropical_forest_succession(1).xlsx", sheet="Site_environmental_data")
+environmental <- read_xlsx("~/Downloads/EM_Tropical_forest_succession(1).xlsx", sheet="Site_environmental_data")
 
-forest_vegetation <- read_xlsx("~/Downloads/EM_Tropical_forest_succession(1).xlsx", sheet="Site_vegetation_data")
+vegetation <- read_xlsx("~/Downloads/EM_Tropical_forest_succession(1).xlsx", sheet="Site_vegetation_data")
 
 
-forest_vegetation <- forest_vegetation %>%
+vegetation <- vegetation %>%
   mutate(
     Forest_type = factor(Forest_type, levels = c("Dry", "Wet")),
     Age = as.factor(Age),
     Site = as.factor(Site)
   )
 
-data_full <- forest_vegetation %>%
-  left_join(forest_environmental, by = c("Forest_type", "Site"))
+data_full <- vegetation %>%
+  left_join(environmental, by = c("Forest_type", "Site"))
 
 glimpse(data_full)
 

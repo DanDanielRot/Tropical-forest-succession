@@ -369,3 +369,11 @@ vif(glm3)
 summary(glm3)            
 glm3 <- step(glm3, direction = "backward")
 summary(glm3)
+
+##T-randtest for differences in growth forms coverage between the years
+t1_2 <-tpaired.krandtest(matrix[year1,], matrix[year2,])
+t1_2
+t1_3 <-tpaired.krandtest(matrix[year1,], matrix[year3,])
+t1_3
+t2_3 <-tpaired.krandtest(matrix[year2,], matrix[year3,])
+t2_3

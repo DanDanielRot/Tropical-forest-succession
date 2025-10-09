@@ -39,11 +39,11 @@ summary(eigenvals(pcascale))
 biplot(pcascale, type = "text")
 anova(pcascale)
 
-# Then run the following:
-  library(tidyverse)
-library(vegan)   # if you're using 'scores()' from vegan
 
 ## central points
+site_scores <- scores(pcascale, display = "sites")
+site_scores_df <- as.data.frame(site_scores)
+site_scores_df$SiteAge <- rownames(site_scores_df)
 
 site_scores <- site_scores %>%
   mutate(Group = paste(Forest_type, Year, sep = "_"))

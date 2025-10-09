@@ -340,6 +340,120 @@ tapply(X = Sites$TBI2_3, INDEX = Sites$Forest_type, FUN = shapiro.test)
 leveneTest(TBI2_3~Forest_type, data = Sites, center = median)
 t.test(TBI2_3 ~ Forest_type, data = Sites, var.equal = TRUE)
 
+##T-randtest for differences in growth forms coverage between the years
+t1_2 <-tpaired.krandtest(matrix[year1,], matrix[year2,])
+t1_2
+t1_3 <-tpaired.krandtest(matrix[year1,], matrix[year3,])
+t1_3
+t2_3 <-tpaired.krandtest(matrix[year2,], matrix[year3,])
+t2_3
+
+##PCA
+#create fitting datasets
+vegetation$SiteAge <- paste(vegetation$Site, "", vegetation$Age)
+vegetation_other <- vegetation %>% column_to_rownames("SiteAge")
+vegetation_other <- vegetation_other[-(8:15)]
+PCA_vegetation <- vegetation
+PCA_vegetation <- PCA_vegetation %>% column_to_rownames("Site")
+str(PCA_vegetation)
+#percentage of 0's
+sum(PCA_vegetation == 0) / (nrow(PCA_vegetation) * ncol(PCA_vegetation))
+#gradients
+decorana(matrix) #short gradient
+
+# Scaled PCA
+pcascale <- pca(matrix, scale = TRUE)
+pcascale
+#broken stick analysis
+screeplot(pcascale, bstick = TRUE)
+#look at eigenvalues
+summary(eigenvals(pcascale))
+# Cum prop PC2 is 0.56 dus 56% is explained by first two axis
+
+##Biplot
+biplot(pcascale, type = "text")
+anova(pcascale)
+
+site_scores <- scores(pcascale, display = "sites")
+site_scores_df <- as.data.frame(site_scores)
+site_scores_df$SiteAge <- rownames(site_scores_df)
+site_scores_df$Forest_type <- c(rep("Dry", 48), rep("Wet", 42))
+site_scores_df$Year <- c(rep(1:3))
+
+## central points
+site_scores <- site_scores %>%
+  mutate(Group = paste(Forest_type, Year, sep = "_"))
+
+# --- 5. Compute convex hulls for each group ---
+hull_data <- site_scores %>%
+  group_by(Group) %>%
+  slice(chull(PC1, PC2))
+
+# --- 6. Compute centroids (mean coordinates per Forest_type × Year) ---
+centroids <- site_scores %>%
+  group_by(Forest_type, Year) %>%
+  summarise(PC1 = mean(PC1), PC2 = mean(PC2))
+
+species_scores <- as.data.frame(scores(pcascale, display = "species"))
+species_scores$FG <- rownames(species_scores)
+
+# --- 7. Define color palette for the 6 hulls ---
+hull_colors <- c(
+  "Dry_1" = "#1b9e77",  # green
+  "Wet_1" = "#7570b3",  # blue
+  "Dry_2" = "#d95f02",  # orange
+  "Wet_2" = "#e7298a",  # pink
+  "Dry_3" = "#66a61e",  # light green
+  "Wet_3" = "#1f78b4"   # light blue
+)
+
+# --- 8. Plot everything ---
+ggplot() +
+  # (a) Hull polygons
+  geom_polygon(data = hull_data,
+               aes(x = PC1, y = PC2, group = Group, fill = Group),
+               alpha = 0.25, color = "black", linewidth = 0.5) +
+  
+  # (b) Site points (small)
+  geom_point(data = site_scores,
+             aes(x = PC1, y = PC2, color = Forest_type),
+             size = 2, alpha = 0.6) +
+  
+  # (c) Centroid trajectories
+  geom_path(data = centroids,
+            aes(x = PC1, y = PC2, group = Forest_type, color = Forest_type),
+            arrow = arrow(length = unit(0.25, "cm")),
+            linewidth = 1.2) +
+  geom_point(data = centroids,
+             aes(x = PC1, y = PC2, fill = Forest_type),
+             shape = 21, color = "black", size = 5) +
+  geom_text(data = centroids,
+            aes(x = PC1, y = PC2, label = Year),
+            color = "black", vjust = -1, fontface = "bold", size = 4) +
+  
+  # (d) Species (functional group) arrows (red)
+  geom_segment(data = species_scores,
+               aes(x = 0, y = 0, xend = PC1, yend = PC2),
+               arrow = arrow(length = unit(0.2, "cm")),
+               color = "red", linewidth = 0.7) +
+  geom_text(data = species_scores,
+            aes(x = PC1 * 1.1, y = PC2 * 1.1, label = FG),
+            color = "red", size = 4, fontface = "italic") +
+  
+  # (e) Aesthetics
+  scale_color_manual(values = c("Dry" = "forestgreen", "Wet" = "blue")) +
+  scale_fill_manual(values = hull_colors) +
+  theme_minimal() +
+  labs(x = "PC1", y = "PC2",
+       title = "PCA biplot: site trajectories, species vectors and centroid arrows",
+       subtitle = "Arrows connect mean community positions (centroids) for Years 1–3 per forest type",
+       color = "Forest type", fill = "Forest type × Year") +
+  theme(legend.position = "right",
+        text = element_text(size = 13))
+
+###RQ2----
+#What are the environmental and landscape drivers of successional trajectories?
+
 ##Create dataset with TBI data and environmental data
 distance <- merge(Sites, environmental, by = c("Site"))
 distance$Site <- as.factor(distance$Site)
@@ -370,10 +484,86 @@ summary(glm3)
 glm3 <- step(glm3, direction = "backward")
 summary(glm3)
 
-##T-randtest for differences in growth forms coverage between the years
-t1_2 <-tpaired.krandtest(matrix[year1,], matrix[year2,])
-t1_2
-t1_3 <-tpaired.krandtest(matrix[year1,], matrix[year3,])
-t1_3
-t2_3 <-tpaired.krandtest(matrix[year2,], matrix[year3,])
-t2_3
+##PCA with environmental variables
+
+### Environmental data fitted
+data_full <- forest_vegetation %>%
+  left_join(forest_environmental, by = c("Forest_type", "Site"))
+data_up = data_full[-(4:14)]
+data_up = data_up[-(2)]
+data_up = data_up[-(4:5)]
+
+envfitpca <- envfit(pcascale, data_up)
+biplot(pcascale, type = "text")
+plot(envfitpca, p.max = 0.05, add = TRUE)
+envfitpca
+
+# --- Extract environmental vectors with p-values ---
+env_scores <- as.data.frame(scores(envfitpca, "vectors"))
+env_scores$Variable <- rownames(env_scores)
+
+# Voeg p-waarden toe van envfit
+env_scores$pval <- envfitpca$vectors$pvals
+
+# Filter alleen significante variabelen
+env_scores_sig <- env_scores %>%
+  filter(pval < 0.05)
+
+# Scaling factor (optioneel)
+mult <- 2
+env_scores_sig <- env_scores_sig %>%
+  mutate(PC1 = PC1 * mult,
+         PC2 = PC2 * mult)
+
+# --- Plot only significant environmental arrows ---
+ggplot() +
+  # (a) Hull polygons
+  geom_polygon(data = hull_data,
+               aes(x = PC1, y = PC2, group = Group, fill = Group),
+               alpha = 0.25, color = "black", linewidth = 0.5) +
+  
+  # (b) Site points
+  geom_point(data = site_scores,
+             aes(x = PC1, y = PC2, color = Forest_type),
+             size = 2, alpha = 0.6) +
+  
+  # (c) Centroid trajectories
+  geom_path(data = centroids,
+            aes(x = PC1, y = PC2, group = Forest_type, color = Forest_type),
+            arrow = arrow(length = unit(0.25, "cm")),
+            linewidth = 1.2) +
+  geom_point(data = centroids,
+             aes(x = PC1, y = PC2, fill = Forest_type),
+             shape = 21, color = "black", size = 5) +
+  geom_text(data = centroids,
+            aes(x = PC1, y = PC2, label = Year),
+            color = "black", vjust = -1, fontface = "bold", size = 4) +
+  
+  # (d) Species arrows (red)
+  geom_segment(data = species_scores,
+               aes(x = 0, y = 0, xend = PC1, yend = PC2),
+               arrow = arrow(length = unit(0.2, "cm")),
+               color = "red", linewidth = 0.7) +
+  geom_text(data = species_scores,
+            aes(x = PC1 * 1.1, y = PC2 * 1.1, label = FG),
+            color = "red", size = 4, fontface = "italic") +
+  
+  # (e) Significant environmental arrows (darkorange)
+  geom_segment(data = env_scores_sig,
+               aes(x = 0, y = 0, xend = PC1, yend = PC2),
+               arrow = arrow(length = unit(0.25, "cm")),
+               color = "darkgoldenrod1", linewidth = 1) +
+  geom_text(data = env_scores_sig,
+            aes(x = PC1 * 1.1, y = PC2 * 1.1, label = Variable),
+            color = "darkgoldenrod1", size = 4, fontface = "bold") +
+  
+  # (f) Aesthetics
+  scale_color_manual(values = c("Dry" = "forestgreen", "Wet" = "blue")) +
+  scale_fill_manual(values = hull_colors) +
+  theme_minimal() +
+  labs(x = "PC1", y = "PC2",
+       title = "PCA biplot: species, significant environment, site trajectories & centroids",
+       subtitle = "Red = species (FG), Orange = significant environmental variables (p < 0.05)",
+       color = "Forest type", fill = "Forest type × Year") +
+  theme(legend.position = "right",
+        text = element_text(size = 13))

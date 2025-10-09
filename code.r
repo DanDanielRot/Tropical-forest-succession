@@ -154,7 +154,20 @@ summary(pair_lai)
 
 anova(lmm_lai)
 
+# 4.1 Species richness: check distribution & overdispersion for Poisson
+hist(data_full$Species_richness, main = "Species richness distribution")
+# Fit Poisson GLMM (simple)
+pois_glmm <- glmer(Species_richness ~ Age * Forest_type + (1|Site), data = data_full, family = poisson)
 
+pois_glmm
+
+# Fit Negative Binomial GLMM (preferred if overdispersion > ~1.3)
+nb_glmm <- glmer.nb(Species_richness ~ Age * Forest_type + (1|Site), data = data_full)
+
+# Summarize NB GLMM
+summary(nb_glmm)
+# Likelihood ratio tests for fixed effects (Type III)
+anova(nb_glmm)
 
 
 
